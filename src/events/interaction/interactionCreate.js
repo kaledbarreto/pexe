@@ -38,12 +38,12 @@ module.exports = {
 
             const modal = new ModalBuilder()
                 .setCustomId('modal_registro_pexe')
-                .setTitle('Cartório do Cardume');
+                .setTitle('RG Pexe - Escolha seu sobrenome');
 
             const sobrenomeInput = new TextInputBuilder()
                 .setCustomId('sobrenome')
                 .setLabel('Qual é o seu sobrenome Pexe?')
-                .setPlaceholder('Ex: Abacate, Arroz, Pequeno...')
+                .setPlaceholder('Ex: Frito, Tsunami, Sol...')
                 .setStyle(TextInputStyle.Short)
                 .setRequired(true)
                 .setMaxLength(50);
