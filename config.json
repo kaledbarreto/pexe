@@ -1,6 +1,8 @@
 {
     "features": {
         "pexe": true,
-        "autorename": false
+        "autorename": false,
+        "setup-registro": true,
+        "cargos": true
     }
 }

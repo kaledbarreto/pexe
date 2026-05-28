@@ -58,14 +58,44 @@ Verifica se o bot está online e exibe as latências de conexão.
 > ⚡ Reflexo: 87ms
 ```
 
-- **Batimento** — latência do WebSocket (conexão persistente com o Discord)
-- **Reflexo** — latência REST (tempo de ida e volta da mensagem)
-- Resposta visível apenas para quem usou o comando (ephemeral)
+---
+
+### Auto-assign ao entrar
+Quando um novo membro entra no servidor, o bot automaticamente:
+- Define o apelido como **"Pexe"**
+- Adiciona os cargos **"Li as Regras e Concordo"** e **"Perdidos"**
+
+> Controlado pela flag `autorename` no `config.json`.
 
 ---
 
-### Auto-rename ao entrar
-Sempre que um novo membro entra no servidor, o bot define automaticamente o apelido dele como **"Pexe"**. A partir daí, um admin adiciona o restante do nome (`Pexe Abacate`, `Pexemon Go`, etc.).
+### `/setup-registro` *(admin)*
+Envia a mensagem do **Cartório do Cardume** no canal atual — um embed com o botão de registro.
+
+O fluxo de registro:
+1. Membro clica em **📥 Registrar-se**
+2. Modal abre pedindo o sobrenome Pexe
+3. Bot valida duplicatas (case-insensitive) contra todos os membros do servidor
+4. Se aprovado: define o apelido como `Pexe {Sobrenome}`, remove o cargo **Perdidos** e adiciona o cargo **Cardume**
+
+> O bot impede que o membro coloque "Pexe" no início do sobrenome (ex: "Pexe Arroz" vira "Arroz" automaticamente).
+
+---
+
+### `/cargos` *(admin)*
+Gerencia cargos em massa filtrando por apelido exato.
+
+| Subcomando | Descrição |
+|---|---|
+| `adicionar` | Adiciona um cargo a todos com o nick especificado |
+| `remover` | Remove um cargo de todos com o nick especificado |
+| `substituir` | Troca um cargo por outro em todos com o nick especificado |
+
+```
+/cargos substituir filtro:Pexe remover:@Cardume adicionar:@Perdidos
+/cargos adicionar  filtro:Pexe Batata cargo:@Cardume
+/cargos remover    filtro:Pexe Arroz  cargo:@Perdidos
+```
 
 ---
 
@@ -77,7 +107,9 @@ Edite o `config.json` na raiz do projeto e reinicie o bot:
 {
     "features": {
         "pexe": true,
-        "autorename": true
+        "autorename": true,
+        "setup-registro": true,
+        "cargos": true
     }
 }
 ```
@@ -91,21 +123,25 @@ Funcionalidades com `false` são removidas da listagem de comandos do Discord �
 ```
 pexe/
 ├── src/
-│   ├── index.js                        # Engine — carrega comandos e eventos, faz login
+│   ├── index.js                          # Engine — carrega comandos e eventos, faz login
 │   ├── commands/
+│   │   ├── admin/
+│   │   │   ├── setup-registro.js         # Comando /setup-registro
+│   │   │   └── cargos.js                 # Comando /cargos
 │   │   └── utility/
-│   │       └── pexe.js                 # Comando /pexe
+│   │       └── pexe.js                   # Comando /pexe
 │   └── events/
 │       ├── client/
-│       │   └── ready.js                # Registra comandos ao iniciar
+│       │   ├── ready.js                  # Registra comandos e popula cache ao iniciar
+│       │   └── error.js                  # Previne crashes em erros do Gateway
 │       ├── guild/
-│       │   └── guildMemberAdd.js       # Auto-rename ao entrar
+│       │   └── guildMemberAdd.js         # Auto-rename e cargos ao entrar
 │       └── interaction/
-│           └── interactionCreate.js    # Roteador global de slash commands
-├── config.json                         # Feature flags (true/false por funcionalidade)
-├── .env                                # Secrets locais (Git-ignored)
+│           └── interactionCreate.js      # Roteador: slash commands, botões e modais
+├── config.json                           # Feature flags (true/false por funcionalidade)
+├── .env                                  # Secrets locais (Git-ignored)
 ├── .gitignore
-├── CLAUDE.md                           # Contexto para o agente de IA
+├── CLAUDE.md                             # Contexto para o agente de IA
 ├── package.json
 └── README.md
 ```
@@ -118,7 +154,7 @@ pexe/
 2. Exporte exatamente duas propriedades:
 
 ```js
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -126,7 +162,7 @@ module.exports = {
         .setDescription('Descrição do comando'),
 
     async execute(interaction) {
-        await interaction.reply({ content: 'Resposta', ephemeral: true });
+        await interaction.reply({ content: 'Resposta', flags: MessageFlags.Ephemeral });
     }
 };
 ```

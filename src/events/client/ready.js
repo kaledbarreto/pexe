@@ -24,6 +24,11 @@ module.exports = {
             }
         }
 
+        // Popula o cache de membros de todos os servidores para verificações em runtime
+        for (const guild of client.guilds.cache.values()) {
+            await guild.members.fetch();
+        }
+
         const rest = new REST().setToken(process.env.DISCORD_TOKEN);
 
         // Se usando guild commands, limpa comandos globais para evitar duplicatas
