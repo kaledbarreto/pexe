@@ -1,0 +1,42 @@
+name: pexe-bot
+
+services:
+  bot:
+    build: .
+    image: pexe-bot:latest
+    container_name: pexe-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Polls GitHub Releases and redeploys `bot` when a new one is published.
+  # See README "Release & deploy".
+  deployer:
+    build: ./deploy
+    image: pexe-deployer:latest
+    container_name: pexe-deployer
+    restart: unless-stopped
+    user: "${DEPLOY_UID:-1000}:${DEPLOY_GID:-1000}"
+    group_add:
+      - "${DOCKER_GID:-103}"
+    environment:
+      GITHUB_REPO: kaledbarreto/pexe
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      POLL_INTERVAL: ${POLL_INTERVAL:-120}
+      REPO_DIR: /srv/pexe-bot
+      HOME: /tmp
+    volumes:
+      - .:/srv/pexe-bot
+      - /var/run/docker.sock:/var/run/docker.sock
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -118,6 +118,40 @@ Funcionalidades com `false` são removidas da listagem de comandos do Discord �
 
 ---
 
+## Release & Deploy (Docker)
+
+O servidor roda o bot via `docker compose` a partir de um clone deste repositório. O deploy é **pull-based**: o serviço `deployer` (`deploy/release-watcher.sh`) consulta a API de Releases do GitHub a cada `POLL_INTERVAL` segundos (padrão 120). Quando a release mais recente (publicada, não-prerelease) difere da tag em que o clone está, ele:
+
+1. faz `git fetch` da tag e `git checkout --detach <tag>` no clone;
+2. roda `docker compose up -d --build bot`;
+3. aguarda e verifica se o container está `running` sem restarts (senão, loga o erro e não tenta de novo aquela tag).
+
+Não precisa de runner self-hosted, admin no repositório nem porta aberta no servidor.
+
+**Primeira vez no servidor:**
+
+```bash
+cp .env.example .env   # preencha DISCORD_TOKEN / CLIENT_ID
+docker compose up -d --build   # sobe bot + deployer
+docker logs -f pexe-deployer
+```
+
+**Lançar uma versão:**
+
+```bash
+git tag v0.3.0 && git push origin v0.3.0
+```
+
+O workflow `.github/workflows/release.yml` cria a GitHub Release automaticamente a partir da tag (também dá para criar pela UI ou com `gh release create v0.3.0 --generate-notes`). Em até ~2 min o servidor faz o deploy.
+
+Variáveis opcionais (no shell ou no `.env`): `POLL_INTERVAL`, `GITHUB_TOKEN` (só se o repo virar privado — token read-only de *contents*), `DOCKER_GID` / `DEPLOY_UID` / `DEPLOY_GID` (padrão `103` / `1000` / `1000`; devem bater com o grupo `docker` e o dono do clone).
+
+> O clone no servidor não deve ter alterações em arquivos versionados (ex.: `config.json`) — o deployer recusa o deploy nesse caso. Mudanças de feature flag devem ir por commit + release. Alterações no próprio `deploy/` só valem após `docker compose up -d --build deployer`.
+
+> ⚠️ O deployer tem acesso ao socket do Docker: qualquer pessoa com permissão de push/release no repositório consegue executar código como root neste servidor.
+
+---
+
 ## Estrutura do Projeto
 
 ```

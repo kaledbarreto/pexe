@@ -73,6 +73,11 @@ All runtime interactions must be wrapped in `try/catch` blocks. Separate `try/ca
 * `package.json` — Project manifest; declares `discord.js ^14.14.1` and `dotenv ^16.4.5` as dependencies, Node ≥ 18 engine requirement.
 * `.env` — Environment variables (Git-ignored): `DISCORD_TOKEN`, `CLIENT_ID`, and optional `GUILD_ID`.
 * `config.json` — Feature flags. Each entry is `"commandName": true/false`. Filtered at startup in `ready.js`; disabled commands are never registered with Discord. Edit and restart to apply changes.
+* `Dockerfile` / `.dockerignore` — Production image for the bot (`node:20-alpine`, non-root `bot` user).
+* `docker-compose.yml` — Services: `bot` (the Discord bot, reads `.env`) and `deployer` (release watcher; mounts this clone at `/srv/pexe-bot` and the Docker socket).
+* `.env.example` — Template for `.env`.
+* `deploy/Dockerfile` + `deploy/release-watcher.sh` — Pull-based CD. Polls `GET /repos/kaledbarreto/pexe/releases/latest`; when its tag differs from the clone's HEAD tag (`git describe --exact-match`), fetches the tag over HTTPS, checks it out detached, runs `docker compose up -d --build bot`, and verifies the container is running with 0 restarts. Refuses to deploy if tracked files are dirty. No state file — deployed version = clone HEAD.
+* `.github/workflows/release.yml` — On `v*` tag push (GitHub-hosted runner), creates the GitHub Release with generated notes (idempotent). Self-hosted runners are NOT used (no repo admin access).
 * `src/index.js` — Core bootstrap engine. Creates the Discord `Client`, dynamically scans `src/commands/<category>/` and `src/events/<category>/` at startup, registers all handlers, and calls `client.login()`. Intents: `Guilds`, `GuildMembers`.
 * `src/events/client/ready.js` — Registered under `clientReady`. Fetches all guild members at startup to populate the cache. If `GUILD_ID` is set, clears global commands to avoid duplicates. Clears all guild-specific command overrides. Registers only enabled commands (filtered via `config.json`) to guild or globally.
 * `src/events/client/error.js` — Listens to the Client `error` event and logs it to the console. Prevents unhandled Gateway errors (e.g., rate limits) from crashing the process.
@@ -92,7 +97,8 @@ All runtime interactions must be wrapped in `try/catch` blocks. Separate `try/ca
 - [x] **Step 4:** Implement `config.json` feature flags. Disabled commands are filtered at registration time and invisible in Discord. `ready.js` clears both global and guild command overrides on startup to prevent stale duplicates.
 - [x] **Step 5:** Implement sistema de registro — `/setup-registro` (embed + botão), modal de sobrenome, validação de duplicata, remoção do cargo Perdidos e atribuição do cargo Cardume.
 - [x] **Step 6:** Implement `/cargos` (gerenciamento de cargos em massa por filtro de nick), `error.js` (prevenção de crashes), cache de membros populado no startup, e auto-assign de cargos no `guildMemberAdd`.
-- [ ] **Step 7:** Implement next features (TBD).
+- [x] **Step 7:** Docker deploy + release process: tag `v*` → GitHub Release → `deployer` container pulls tag into server clone and rebuilds/restarts `bot`.
+- [ ] **Step 8:** Implement next features (TBD).
 
 ---
 [SYSTEM INSTRUCTION FOR CLAUDE: When modifying or creating files, check off the roadmap tasks above and document new files in the "Current Project State" section. Keep this file updated dynamically.]
