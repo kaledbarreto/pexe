@@ -69,6 +69,13 @@ Quando um novo membro entra no servidor, o bot automaticamente:
 
 ---
 
+### Reação "Pexe."
+Quando alguém envia uma mensagem contendo **exatamente** `Pexe.` (nada mais), o bot reage com o emoji `:pexe:` do servidor.
+
+> Controlado pela flag `pexe-reacao` no `config.json`. Requer o **Message Content Intent** habilitado no Developer Portal.
+
+---
+
 ### `/setup-registro` *(admin)*
 Envia a mensagem do **Cartório do Cardume** no canal atual — um embed com o botão de registro.
 
@@ -109,7 +116,8 @@ Edite o `config.json` na raiz do projeto e reinicie o bot:
         "pexe": true,
         "autorename": true,
         "setup-registro": true,
-        "cargos": true
+        "cargos": true,
+        "pexe-reacao": true
     }
 }
 ```
@@ -170,6 +178,8 @@ pexe/
 │       │   └── error.js                  # Previne crashes em erros do Gateway
 │       ├── guild/
 │       │   └── guildMemberAdd.js         # Auto-rename e cargos ao entrar
+│       ├── message/
+│       │   └── messageCreate.js          # Reage com :pexe: a mensagens "Pexe."
 │       └── interaction/
 │           └── interactionCreate.js      # Roteador: slash commands, botões e modais
 ├── config.json                           # Feature flags (true/false por funcionalidade)

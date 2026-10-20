@@ -3,6 +3,7 @@
         "pexe": true,
         "autorename": false,
         "setup-registro": true,
-        "cargos": true
+        "cargos": true,
+        "pexe-reacao": true
     }
 }
