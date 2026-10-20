@@ -1,6 +1,6 @@
 {
   "name": "pexe-bot",
-  "version": "1.0.0",
+  "version": "0.4.0",
   "description": "A stateless Discord bot built with discord.js v14.",
   "main": "src/index.js",
   "scripts": {
