@@ -78,9 +78,10 @@ Quando alguém envia uma mensagem contendo **exatamente** `Pexe.` (nada mais), o
 ---
 
 ### Áudio "simudar"
-Quando alguém envia uma mensagem contendo **simudar** — com qualquer letra repetida (`siiimuudar`, `SIIIIIIMUDAR`...) — o bot responde com o áudio `assets/simudar.mp3`.
+Quando alguém envia uma mensagem contendo **simudar** — com qualquer letra repetida (`siiimuudar`, `SIIIIIIMUDAR`...) — o bot toca o áudio:
 
-Se quem mandou estiver em uma call, o bot também entra nessa call, toca o áudio (`assets/simudar.ogg`, Ogg Opus) e sai. Se o bot já estiver em alguma call no servidor, ele só responde no chat.
+- **Autor em call:** o bot entra nessa call, toca o áudio (`assets/simudar.ogg`, Ogg Opus) e sai — sem mandar nada no chat.
+- **Caso contrário** (autor fora de call, bot já em outra call no servidor, sem permissão ou falha ao tocar): responde no chat com `assets/simudar.mp3`.
 
 > Controlado pelas flags `simudar-audio` (resposta no chat) e `simudar-call` (tocar na call) no `config.json`. O bot precisa das permissões **Conectar** e **Falar** no canal de voz.
 

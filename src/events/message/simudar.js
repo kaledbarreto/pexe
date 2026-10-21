@@ -20,12 +20,13 @@ const AUDIO_PATH = path.join(__dirname, '../../../assets/simudar.mp3');
 // Versão Ogg Opus do mesmo áudio: tocada direto na call, sem ffmpeg/encoder
 const VOZ_PATH = path.join(__dirname, '../../../assets/simudar.ogg');
 
+// Retorna false se não deu pra entrar na call (o chamador cai no áudio pelo chat)
 async function tocarNaCall(canal) {
     // Já está em alguma call nesse servidor (ex.: tocando outro "simudar")
-    if (getVoiceConnection(canal.guild.id)) return;
+    if (getVoiceConnection(canal.guild.id)) return false;
     if (!canal.joinable || !canal.speakable) {
         logger.warn(`[simudar] Sem permissão para entrar/falar em #${canal.name}`);
-        return;
+        return false;
     }
 
     const connection = joinVoiceChannel({
@@ -46,6 +47,7 @@ async function tocarNaCall(canal) {
     } finally {
         connection.destroy();
     }
+    return true;
 }
 
 module.exports = {
@@ -54,6 +56,20 @@ module.exports = {
         if (config.features['simudar-audio'] === false) return;
         if (message.author.bot || !message.guild) return;
         if (!GATILHO.test(message.content)) return;
+
+        // Autor em call: toca lá e não manda no chat
+        const canal = message.member?.voice.channel;
+        if (canal && config.features['simudar-call'] !== false) {
+            if (!fs.existsSync(VOZ_PATH)) {
+                logger.error(`[simudar] Áudio de voz não encontrado em ${VOZ_PATH}`);
+            } else {
+                try {
+                    if (await tocarNaCall(canal)) return;
+                } catch (error) {
+                    logger.error(`[simudar] Falha ao tocar na call #${canal.name}:`, error);
+                }
+            }
+        }
 
         if (!fs.existsSync(AUDIO_PATH)) {
             logger.error(`[simudar] Áudio não encontrado em ${AUDIO_PATH}`);
@@ -67,21 +83,6 @@ module.exports = {
             });
         } catch (error) {
             logger.error(`[simudar] Falha ao responder ${message.author.tag}:`, error);
-        }
-
-        if (config.features['simudar-call'] === false) return;
-        const canal = message.member?.voice.channel;
-        if (!canal) return;
-
-        if (!fs.existsSync(VOZ_PATH)) {
-            logger.error(`[simudar] Áudio de voz não encontrado em ${VOZ_PATH}`);
-            return;
-        }
-
-        try {
-            await tocarNaCall(canal);
-        } catch (error) {
-            logger.error(`[simudar] Falha ao tocar na call #${canal.name}:`, error);
         }
     }
 };
