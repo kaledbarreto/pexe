@@ -12,6 +12,7 @@ RUN addgroup -S bot && adduser -S bot -G bot
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
 COPY config.json ./
+COPY assets ./assets
 COPY src ./src
 
 USER bot

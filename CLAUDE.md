@@ -59,6 +59,7 @@ All runtime interactions must be wrapped in `try/catch` blocks. Separate `try/ca
 | `setup-registro` | `true`  | Enables the `/setup-registro` admin command                                 |
 | `cargos`         | `true`  | Enables the `/cargos` admin command                                         |
 | `pexe-reacao`    | `true`  | Reacts with the guild's `:pexe:` emoji to messages that are exactly `Pexe.` |
+| `simudar-audio`  | `true`  | Replies with `assets/simudar.mp3` to messages containing "simudar" (any letter repeatable) |
 
 ### Server Role Constants
 | Constant            | ID                    | Cargo                   | File                   |
@@ -88,6 +89,8 @@ All runtime interactions must be wrapped in `try/catch` blocks. Separate `try/ca
 * `src/events/interaction/interactionCreate.js` — Central interaction router. Handles: (1) `ChatInputCommand` — routes to command handlers; (2) `Button` `trigger_registro_pexe` — checks if member has `CARGO_PENDENTE_ID` (Perdidos), if not bars them as already registered, otherwise shows the modal; (3) `ModalSubmit` `modal_registro_pexe` — strips leading "Pexe" prefix from input, validates case-insensitive duplicates against `guild.members.cache`, sets nickname to "Pexe {sobrenome}", removes `CARGO_PENDENTE_ID` and adds `CARGO_MEMBRO_ID`. Each operation (nickname, roles) has its own `try/catch`.
 * `src/events/guild/guildMemberAdd.js` — Fires on every new member join; checks `config.features.autorename`, sets nickname to "Pexe", and adds `CARGO_REGRAS_ID` + `CARGO_PERDIDOS_ID` in a single `roles.add()` call. Nickname and role operations have separate `try/catch`.
 * `src/events/message/messageCreate.js` — If `config.features['pexe-reacao']` isn't `false`, reacts to guild messages whose trimmed content is exactly `Pexe.` (ignores bots) with the guild emoji named `pexe`, looked up by name in `guild.emojis.cache`.
+* `src/events/message/simudar.js` — Second `messageCreate` listener. If `config.features['simudar-audio']` isn't `false`, replies (no ping) with `assets/simudar.mp3` as an attachment to guild messages matching `/s+i+m+u+d+a+r+/i` (e.g. "siiimuudar"). Ignores bots; logs and skips if the audio file is missing.
+* `assets/` — Static files shipped in the Docker image (`COPY assets ./assets`). Holds `simudar.mp3`.
 * `src/commands/utility/pexe.js` — `/pexe` command; ephemerally shows WebSocket latency ("Batimento 💓") and REST latency ("Reflexo ⚡") with a themed "Pexe tá vivo!" message.
 * `src/commands/admin/setup-registro.js` — `/setup-registro` admin-only command. Sends a themed embed ("Cartório do Cardume") with a "📥 Registrar-se" button to the current channel via `interaction.channel.send()`, confirming to the admin ephemerally.
 * `src/commands/admin/cargos.js` — `/cargos` admin-only command with three subcommands: `adicionar`, `remover`, `substituir`. Each takes a `filtro` (free-text exact nickname) and one or two role options. Uses `guild.members.cache` to find targets and `Promise.allSettled` for parallel role updates. Reports successes and failures to the admin ephemerally.
@@ -105,7 +108,8 @@ All runtime interactions must be wrapped in `try/catch` blocks. Separate `try/ca
 - [x] **Step 7:** Docker deploy + release process: tag `v*` → GitHub Release → `deployer` container pulls tag into server clone and rebuilds/restarts `bot`.
 - [x] **Step 8:** Reação automática `:pexe:` a mensagens exatamente "Pexe." (`messageCreate.js`, flag `pexe-reacao`).
 - [x] **Step 9:** Logging centralizado com `winston` (`src/utils/logger.js`), prefixo de timestamp em toda saída.
-- [ ] **Step 10:** Implement next features (TBD).
+- [x] **Step 10:** Resposta em áudio a mensagens contendo "simudar" com letras repetidas (`simudar.js`, flag `simudar-audio`).
+- [ ] **Step 11:** Implement next features (TBD).
 
 ---
 [SYSTEM INSTRUCTION FOR CLAUDE: When modifying or creating files, check off the roadmap tasks above and document new files in the "Current Project State" section. Keep this file updated dynamically.]
