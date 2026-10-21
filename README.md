@@ -1,6 +1,6 @@
 # 🐟 Pexe Bot
 
-Bot do servidor **Pexe** — construído com **discord.js v14** e **Node.js 18+**.
+Bot do servidor **Pexe** — construído com **discord.js v14** e **Node.js 22.12+**.
 
 Todos são Pexe.
 
@@ -10,7 +10,7 @@ Todos são Pexe.
 
 | Camada          | Tecnologia          |
 | --------------- | ------------------- |
-| Runtime         | Node.js ≥ 18        |
+| Runtime         | Node.js ≥ 22.12     |
 | Discord library | discord.js ^14.14.1 |
 | Environment     | dotenv ^16.4.5      |
 | Logging         | winston ^3.19.0     |
@@ -19,7 +19,7 @@ Todos são Pexe.
 
 ## Pré-requisitos
 
-- Node.js 18 ou superior
+- Node.js 22.12 ou superior
 - Uma aplicação Discord com bot token ([Discord Developer Portal](https://discord.com/developers/applications))
 
 ---
@@ -77,6 +77,15 @@ Quando alguém envia uma mensagem contendo **exatamente** `Pexe.` (nada mais), o
 
 ---
 
+### Áudio "simudar"
+Quando alguém envia uma mensagem contendo **simudar** — com qualquer letra repetida (`siiimuudar`, `SIIIIIIMUDAR`...) — o bot responde com o áudio `assets/simudar.mp3`.
+
+Se quem mandou estiver em uma call, o bot também entra nessa call, toca o áudio (`assets/simudar.ogg`, Ogg Opus) e sai. Se o bot já estiver em alguma call no servidor, ele só responde no chat.
+
+> Controlado pelas flags `simudar-audio` (resposta no chat) e `simudar-call` (tocar na call) no `config.json`. O bot precisa das permissões **Conectar** e **Falar** no canal de voz.
+
+---
+
 ### `/setup-registro` *(admin)*
 Envia a mensagem do **Cartório do Cardume** no canal atual — um embed com o botão de registro.
 
@@ -118,7 +127,9 @@ Edite o `config.json` na raiz do projeto e reinicie o bot:
         "autorename": true,
         "setup-registro": true,
         "cargos": true,
-        "pexe-reacao": true
+        "pexe-reacao": true,
+        "simudar-audio": true,
+        "simudar-call": true
     }
 }
 ```

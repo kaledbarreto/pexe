@@ -8,7 +8,7 @@ This file serves as the single source of truth for the project's technical memor
 
 * **100% Stateless Architecture:** Absolutely NO persistent databases (SQL, NoSQL, MongoDB, Supabase, Redis) or local file writes (JSON, CSV) for state/guild management. All data, validations, and concurrency checks must be resolved at runtime using the in-memory cache populated at startup (`guild.members.cache`).
 * **Member Cache Strategy:** `ready.js` calls `guild.members.fetch()` once at startup for every guild, populating the cache. All runtime operations (duplicate checks, role verifications) must use `guild.members.cache` — never call `guild.members.fetch()` inside interaction handlers to avoid Gateway rate limits.
-* **Framework & Version:** Node.js (v18+) with `discord.js` version 14 (`^14.14.1`). Strict adherence to v14 syntax (e.g., proper GatewayIntentBits, Partials, and SlashCommandBuilder execution format).
+* **Framework & Version:** Node.js (v22.12+, required by `@discordjs/voice`) with `discord.js` version 14 (`^14.14.1`). Strict adherence to v14 syntax (e.g., proper GatewayIntentBits, Partials, and SlashCommandBuilder execution format).
 * **Command & Event Handler Pattern:** The project uses a dynamic file-scanning bootstrap.
     * Individual features must be fully encapsulated into isolated files under `src/commands/<category>/`.
     * Global event listeners must live under `src/events/<category>/`, organized by domain: `client/` (bot lifecycle), `guild/` (server events), `interaction/` (slash commands, buttons, modals), `message/` (message events).
@@ -60,6 +60,7 @@ All runtime interactions must be wrapped in `try/catch` blocks. Separate `try/ca
 | `cargos`         | `true`  | Enables the `/cargos` admin command                                         |
 | `pexe-reacao`    | `true`  | Reacts with the guild's `:pexe:` emoji to messages that are exactly `Pexe.` |
 | `simudar-audio`  | `true`  | Replies with `assets/simudar.mp3` to messages containing "simudar" (any letter repeatable) |
+| `simudar-call`   | `true`  | If the "simudar" sender is in a voice channel, joins it, plays `assets/simudar.ogg`, and leaves |
 
 ### Server Role Constants
 | Constant            | ID                    | Cargo                   | File                   |
@@ -73,24 +74,24 @@ All runtime interactions must be wrapped in `try/catch` blocks. Separate `try/ca
 * `CLAUDE.md` *(this file)* — AI context file at project root; auto-loaded by the Claude Code CLI.
 * `README.md` — Human-facing project documentation: setup guide, features, and command authoring instructions.
 * `.gitignore` — Excludes `node_modules/`, `.env`, logs, and IDE artifacts from version control.
-* `package.json` — Project manifest; declares `discord.js ^14.14.1` and `dotenv ^16.4.5` and `winston ^3.19.0` as dependencies, Node ≥ 18 engine requirement.
+* `package.json` — Project manifest; declares `discord.js ^14.14.1`, `@discordjs/voice ^0.19.2`, `dotenv ^16.4.5` and `winston ^3.19.0` as dependencies, Node ≥ 22.12 engine requirement.
 * `.env` — Environment variables (Git-ignored): `DISCORD_TOKEN`, `CLIENT_ID`, and optional `GUILD_ID`.
 * `config.json` — Feature flags. Each entry is `"commandName": true/false`. Filtered at startup in `ready.js`; disabled commands are never registered with Discord. Edit and restart to apply changes.
-* `Dockerfile` / `.dockerignore` — Production image for the bot (`node:20-alpine`, non-root `bot` user).
+* `Dockerfile` / `.dockerignore` — Production image for the bot (`node:22-alpine`, non-root `bot` user).
 * `docker-compose.yml` — Services: `bot` (the Discord bot, reads `.env`) and `deployer` (release watcher; mounts this clone at `/srv/pexe-bot` and the Docker socket).
 * `.env.example` — Template for `.env`.
 * `deploy/Dockerfile` + `deploy/release-watcher.sh` — Pull-based CD. Polls `GET /repos/kaledbarreto/pexe/releases/latest`; when its tag differs from the clone's HEAD tag (`git describe --exact-match`), fetches the tag over HTTPS, checks it out detached, runs `docker compose up -d --build bot`, and verifies the container is running with 0 restarts. Refuses to deploy if tracked files are dirty. No state file — deployed version = clone HEAD.
 * `.github/workflows/release.yml` — On `v*` tag push (GitHub-hosted runner), creates the GitHub Release with generated notes (idempotent). Self-hosted runners are NOT used (no repo admin access).
 * `.claude/skills/release/SKILL.md` — `/release [patch|minor|major|vX.Y.Z]` skill. Preflights (clean tree, on `main` synced with `origin/main`), computes next semver from the latest tag, confirms with user, runs `npm version X.Y.Z -m "chore(release): v%s"` (bumps `package.json`/lockfile, commits, tags), then `git push --atomic origin main vX.Y.Z`, verifies the Release workflow.
-* `src/index.js` — Core bootstrap engine. Creates the Discord `Client`, dynamically scans `src/commands/<category>/` and `src/events/<category>/` at startup, registers all handlers, and calls `client.login()`. Intents: `Guilds`, `GuildMembers`.
+* `src/index.js` — Core bootstrap engine. Creates the Discord `Client`, dynamically scans `src/commands/<category>/` and `src/events/<category>/` at startup, registers all handlers, and calls `client.login()`. Intents: `Guilds`, `GuildMembers`, `GuildMessages`, `GuildVoiceStates`, `MessageContent`.
 * `src/events/client/ready.js` — Registered under `clientReady`. Fetches all guild members at startup to populate the cache. If `GUILD_ID` is set, clears global commands to avoid duplicates. Clears all guild-specific command overrides. Registers only enabled commands (filtered via `config.json`) to guild or globally.
 * `src/utils/logger.js` — Shared `winston` logger. Console output prefixed with `YYYY-MM-DD HH:mm:ss [LEVEL]`; appends stack for errors. Level from `LOG_LEVEL` (default `info`). All code must log via `logger.info/warn/error` — never `console.*`.
 * `src/events/client/error.js` — Listens to the Client `error` event and logs it via `logger`. Prevents unhandled Gateway errors (e.g., rate limits) from crashing the process.
 * `src/events/interaction/interactionCreate.js` — Central interaction router. Handles: (1) `ChatInputCommand` — routes to command handlers; (2) `Button` `trigger_registro_pexe` — checks if member has `CARGO_PENDENTE_ID` (Perdidos), if not bars them as already registered, otherwise shows the modal; (3) `ModalSubmit` `modal_registro_pexe` — strips leading "Pexe" prefix from input, validates case-insensitive duplicates against `guild.members.cache`, sets nickname to "Pexe {sobrenome}", removes `CARGO_PENDENTE_ID` and adds `CARGO_MEMBRO_ID`. Each operation (nickname, roles) has its own `try/catch`.
 * `src/events/guild/guildMemberAdd.js` — Fires on every new member join; checks `config.features.autorename`, sets nickname to "Pexe", and adds `CARGO_REGRAS_ID` + `CARGO_PERDIDOS_ID` in a single `roles.add()` call. Nickname and role operations have separate `try/catch`.
 * `src/events/message/messageCreate.js` — If `config.features['pexe-reacao']` isn't `false`, reacts to guild messages whose trimmed content is exactly `Pexe.` (ignores bots) with the guild emoji named `pexe`, looked up by name in `guild.emojis.cache`.
-* `src/events/message/simudar.js` — Second `messageCreate` listener. If `config.features['simudar-audio']` isn't `false`, replies (no ping) with `assets/simudar.mp3` as an attachment to guild messages matching `/s+i+m+u+d+a+r+/i` (e.g. "siiimuudar"). Ignores bots; logs and skips if the audio file is missing.
-* `assets/` — Static files shipped in the Docker image (`COPY assets ./assets`). Holds `simudar.mp3`.
+* `src/events/message/simudar.js` — Second `messageCreate` listener. If `config.features['simudar-audio']` isn't `false`, replies (no ping) with `assets/simudar.mp3` as an attachment to guild messages matching `/s+i+m+u+d+a+r+/i` (e.g. "siiimuudar"). Ignores bots; logs and skips if the audio file is missing. Then, if `simudar-call` isn't `false` and `message.member.voice.channel` is set, joins that channel via `@discordjs/voice`, plays `assets/simudar.ogg` as `StreamType.OggOpus` (no ffmpeg/opus encoder needed; encryption uses native `aes-256-gcm`, DAVE via `@snazzah/davey`), waits for `Idle`, and always `destroy()`s the connection in `finally`. Skips if the bot already has a voice connection in that guild (`getVoiceConnection`) or lacks Connect/Speak.
+* `assets/` — Static files shipped in the Docker image (`COPY assets ./assets`). Holds `simudar.mp3` (chat attachment) and `simudar.ogg` (same audio as Ogg Opus 48kHz, for voice playback; regenerate with `ffmpeg -i simudar.mp3 -c:a libopus -b:a 96k -ar 48000 -ac 2 simudar.ogg`).
 * `src/commands/utility/pexe.js` — `/pexe` command; ephemerally shows WebSocket latency ("Batimento 💓") and REST latency ("Reflexo ⚡") with a themed "Pexe tá vivo!" message.
 * `src/commands/admin/setup-registro.js` — `/setup-registro` admin-only command. Sends a themed embed ("Cartório do Cardume") with a "📥 Registrar-se" button to the current channel via `interaction.channel.send()`, confirming to the admin ephemerally.
 * `src/commands/admin/cargos.js` — `/cargos` admin-only command with three subcommands: `adicionar`, `remover`, `substituir`. Each takes a `filtro` (free-text exact nickname) and one or two role options. Uses `guild.members.cache` to find targets and `Promise.allSettled` for parallel role updates. Reports successes and failures to the admin ephemerally.
@@ -109,7 +110,8 @@ All runtime interactions must be wrapped in `try/catch` blocks. Separate `try/ca
 - [x] **Step 8:** Reação automática `:pexe:` a mensagens exatamente "Pexe." (`messageCreate.js`, flag `pexe-reacao`).
 - [x] **Step 9:** Logging centralizado com `winston` (`src/utils/logger.js`), prefixo de timestamp em toda saída.
 - [x] **Step 10:** Resposta em áudio a mensagens contendo "simudar" com letras repetidas (`simudar.js`, flag `simudar-audio`).
-- [ ] **Step 11:** Implement next features (TBD).
+- [x] **Step 11:** Bot entra na call de quem mandou "simudar", toca o áudio e sai (`simudar.js`, flag `simudar-call`, `@discordjs/voice`, Node 22).
+- [ ] **Step 12:** Implement next features (TBD).
 
 ---
 [SYSTEM INSTRUCTION FOR CLAUDE: When modifying or creating files, check off the roadmap tasks above and document new files in the "Current Project State" section. Keep this file updated dynamically.]

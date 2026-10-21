@@ -5,6 +5,7 @@
         "setup-registro": true,
         "cargos": true,
         "pexe-reacao": true,
-        "simudar-audio": true
+        "simudar-audio": true,
+        "simudar-call": true
     }
 }
