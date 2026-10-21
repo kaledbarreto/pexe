@@ -48,6 +48,7 @@ All runtime interactions must be wrapped in `try/catch` blocks. Separate `try/ca
 | --------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DISCORD_TOKEN` | Yes      | Bot token from the Discord Developer Portal                                                                                                                             |
 | `CLIENT_ID`     | Yes      | Application ID from the Discord Developer Portal                                                                                                                        |
+| `LOG_LEVEL`     | No       | Winston log level (`error`, `warn`, `info`, `debug`). Defaults to `info`.                                                                                                |
 | `GUILD_ID`      | No       | If set, commands are registered to this guild only (instant updates). If omitted, commands are registered globally (up to 1h propagation). Recommended for development. |
 
 ### Feature Flags (`config.json`)
@@ -71,7 +72,7 @@ All runtime interactions must be wrapped in `try/catch` blocks. Separate `try/ca
 * `CLAUDE.md` *(this file)* — AI context file at project root; auto-loaded by the Claude Code CLI.
 * `README.md` — Human-facing project documentation: setup guide, features, and command authoring instructions.
 * `.gitignore` — Excludes `node_modules/`, `.env`, logs, and IDE artifacts from version control.
-* `package.json` — Project manifest; declares `discord.js ^14.14.1` and `dotenv ^16.4.5` as dependencies, Node ≥ 18 engine requirement.
+* `package.json` — Project manifest; declares `discord.js ^14.14.1` and `dotenv ^16.4.5` and `winston ^3.19.0` as dependencies, Node ≥ 18 engine requirement.
 * `.env` — Environment variables (Git-ignored): `DISCORD_TOKEN`, `CLIENT_ID`, and optional `GUILD_ID`.
 * `config.json` — Feature flags. Each entry is `"commandName": true/false`. Filtered at startup in `ready.js`; disabled commands are never registered with Discord. Edit and restart to apply changes.
 * `Dockerfile` / `.dockerignore` — Production image for the bot (`node:20-alpine`, non-root `bot` user).
@@ -82,7 +83,8 @@ All runtime interactions must be wrapped in `try/catch` blocks. Separate `try/ca
 * `.claude/skills/release/SKILL.md` — `/release [patch|minor|major|vX.Y.Z]` skill. Preflights (clean tree, on `main` synced with `origin/main`), computes next semver from the latest tag, confirms with user, runs `npm version X.Y.Z -m "chore(release): v%s"` (bumps `package.json`/lockfile, commits, tags), then `git push --atomic origin main vX.Y.Z`, verifies the Release workflow.
 * `src/index.js` — Core bootstrap engine. Creates the Discord `Client`, dynamically scans `src/commands/<category>/` and `src/events/<category>/` at startup, registers all handlers, and calls `client.login()`. Intents: `Guilds`, `GuildMembers`.
 * `src/events/client/ready.js` — Registered under `clientReady`. Fetches all guild members at startup to populate the cache. If `GUILD_ID` is set, clears global commands to avoid duplicates. Clears all guild-specific command overrides. Registers only enabled commands (filtered via `config.json`) to guild or globally.
-* `src/events/client/error.js` — Listens to the Client `error` event and logs it to the console. Prevents unhandled Gateway errors (e.g., rate limits) from crashing the process.
+* `src/utils/logger.js` — Shared `winston` logger. Console output prefixed with `YYYY-MM-DD HH:mm:ss [LEVEL]`; appends stack for errors. Level from `LOG_LEVEL` (default `info`). All code must log via `logger.info/warn/error` — never `console.*`.
+* `src/events/client/error.js` — Listens to the Client `error` event and logs it via `logger`. Prevents unhandled Gateway errors (e.g., rate limits) from crashing the process.
 * `src/events/interaction/interactionCreate.js` — Central interaction router. Handles: (1) `ChatInputCommand` — routes to command handlers; (2) `Button` `trigger_registro_pexe` — checks if member has `CARGO_PENDENTE_ID` (Perdidos), if not bars them as already registered, otherwise shows the modal; (3) `ModalSubmit` `modal_registro_pexe` — strips leading "Pexe" prefix from input, validates case-insensitive duplicates against `guild.members.cache`, sets nickname to "Pexe {sobrenome}", removes `CARGO_PENDENTE_ID` and adds `CARGO_MEMBRO_ID`. Each operation (nickname, roles) has its own `try/catch`.
 * `src/events/guild/guildMemberAdd.js` — Fires on every new member join; checks `config.features.autorename`, sets nickname to "Pexe", and adds `CARGO_REGRAS_ID` + `CARGO_PERDIDOS_ID` in a single `roles.add()` call. Nickname and role operations have separate `try/catch`.
 * `src/events/message/messageCreate.js` — If `config.features['pexe-reacao']` isn't `false`, reacts to guild messages whose trimmed content is exactly `Pexe.` (ignores bots) with the guild emoji named `pexe`, looked up by name in `guild.emojis.cache`.
@@ -102,7 +104,8 @@ All runtime interactions must be wrapped in `try/catch` blocks. Separate `try/ca
 - [x] **Step 6:** Implement `/cargos` (gerenciamento de cargos em massa por filtro de nick), `error.js` (prevenção de crashes), cache de membros populado no startup, e auto-assign de cargos no `guildMemberAdd`.
 - [x] **Step 7:** Docker deploy + release process: tag `v*` → GitHub Release → `deployer` container pulls tag into server clone and rebuilds/restarts `bot`.
 - [x] **Step 8:** Reação automática `:pexe:` a mensagens exatamente "Pexe." (`messageCreate.js`, flag `pexe-reacao`).
-- [ ] **Step 9:** Implement next features (TBD).
+- [x] **Step 9:** Logging centralizado com `winston` (`src/utils/logger.js`), prefixo de timestamp em toda saída.
+- [ ] **Step 10:** Implement next features (TBD).
 
 ---
 [SYSTEM INSTRUCTION FOR CLAUDE: When modifying or creating files, check off the roadmap tasks above and document new files in the "Current Project State" section. Keep this file updated dynamically.]

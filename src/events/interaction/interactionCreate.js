@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 const { MessageFlags, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 
 const CARGO_MEMBRO_ID = '681926568653750342';   // Cargo "🐟 | Cardume"
@@ -16,7 +17,7 @@ module.exports = {
             try {
                 await command.execute(interaction);
             } catch (error) {
-                console.error(`Erro no comando "${interaction.commandName}":`, error);
+                logger.error(`Erro no comando "${interaction.commandName}":`, error);
                 const reply = { content: '🐟 Algo deu errado por aqui. Tenta de novo ou chama um staff.', flags: MessageFlags.Ephemeral };
                 if (interaction.replied || interaction.deferred) {
                     await interaction.followUp(reply);
@@ -82,7 +83,7 @@ module.exports = {
             try {
                 await interaction.member.setNickname(nomeCompleto);
             } catch (error) {
-                console.error(`[registro] Falha ao alterar nickname de ${interaction.user.tag}:`, error);
+                logger.error(`[registro] Falha ao alterar nickname de ${interaction.user.tag}:`, error);
                 return interaction.editReply({
                     content: '🐟 Não consegui registrar o seu nome. Chama um staff pra dar uma olhada.'
                 });
@@ -92,7 +93,7 @@ module.exports = {
                 await interaction.member.roles.remove(CARGO_PENDENTE_ID);
                 await interaction.member.roles.add(CARGO_MEMBRO_ID);
             } catch (error) {
-                console.error(`[registro] Falha ao atualizar cargos de ${interaction.user.tag}:`, error);
+                logger.error(`[registro] Falha ao atualizar cargos de ${interaction.user.tag}:`, error);
                 return interaction.editReply({
                     content: '🐟 Nome definido, mas não consegui atualizar seus cargos. Chama um staff.'
                 });

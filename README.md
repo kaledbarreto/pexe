@@ -13,6 +13,7 @@ Todos são Pexe.
 | Runtime         | Node.js ≥ 18        |
 | Discord library | discord.js ^14.14.1 |
 | Environment     | dotenv ^16.4.5      |
+| Logging         | winston ^3.19.0     |
 
 ---
 

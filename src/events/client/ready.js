@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 const { REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -7,7 +8,7 @@ module.exports = {
     name: 'clientReady',
     once: true,
     async execute(client) {
-        console.log(`🐟 Pexe online — ${client.user.tag}`);
+        logger.info(`🐟 Pexe online — ${client.user.tag}`);
 
         const commands = [];
         const commandsPath = path.join(__dirname, '..', '..', 'commands');
@@ -48,9 +49,9 @@ module.exports = {
         try {
             await rest.put(route, { body: commands });
             const scope = process.env.GUILD_ID ? `servidor ${process.env.GUILD_ID}` : 'global';
-            console.log(`✅ ${commands.length} comando(s) registrado(s) [${scope}]`);
+            logger.info(`✅ ${commands.length} comando(s) registrado(s) [${scope}]`);
         } catch (error) {
-            console.error('Failed to register commands:', error);
+            logger.error('Failed to register commands:', error);
         }
     }
 };

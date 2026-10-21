@@ -1,7 +1,9 @@
+const logger = require('../../utils/logger');
+
 module.exports = {
     name: 'error',
     once: false,
     execute(error) {
-        console.error('[Client Error]', error.message);
+        logger.error('[Client Error]', error.message);
     }
 };
